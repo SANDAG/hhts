@@ -190,7 +190,7 @@ class SurveyData(object):
             if value.is_valid:
                 wkts.append(value.wkt)
             else:
-                wkts.append(np.NaN)
+                wkts.append(None)
 
         return wkts
 
@@ -353,7 +353,16 @@ class SurveyData(object):
             )
 
         # drop empty placeholder records
-        df.dropna(inplace=True)
+        df.dropna(how="all", inplace=True)
+
+        # add Missing labels
+        for col in mappings.keys():
+            df[col].cat.add_categories(
+                ["Missing", "Not Applicable"],
+                inplace=True
+            )
+
+        df.fillna("Missing", inplace=True)
 
         # add surrogate key
         df["border_trip_id"] = np.arange(len(df))
@@ -2906,11 +2915,6 @@ class SurveyData(object):
                                      "Never"]),
                ["transitpass"]] = "Not Applicable"
 
-        # manual recode for school address variables
-        df.loc[df.schooltype.isin(["Missing", "Not Applicable"]),
-               ["mainschool_address",
-                "secondschool_address"]] = "Not Applicable"
-
         # no indicator if second school exists, assume Not Applicable if missing
         df["secondschool_address"] = df["secondschool_address"].fillna("Not Applicable")
 
@@ -2921,7 +2925,9 @@ class SurveyData(object):
                                    "Grade 9-Grade 12 (home school)",
                                    "Missing",
                                    "Not Applicable"]),
-               ["school_freq",
+               ["mainschool_address",
+                "secondschool_address",
+                "school_freq",
                 "other_school",
                 "school_mode"]] = "Not Applicable"
 

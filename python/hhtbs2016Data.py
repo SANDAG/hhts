@@ -11,10 +11,11 @@ Notes:
 """
 
 from functools import lru_cache  # caching decorator for modules
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pyproj
-from shapely import geometry, ops
+from shapely import geometry, ops, wkt
 from typing import Iterable
 
 
@@ -158,6 +159,59 @@ class SurveyData(object):
                 wkts.append(None)
 
         return wkts
+
+    @staticmethod
+    def mgra_xref(points: pd.Series) -> pd.Series:
+        """ PLACEHOLDER. If a point resides on the border of multiple MGRA
+        polygons, only the first MGRA is chosen, sorted by MGRA number.
+
+        Args:
+            points: A Pandas Series of WKT representations of point geometries
+                (see return values of point_wkt() static method) assumed to be
+                in EPSG: 2230
+
+        Returns: A list of MGRAs containing the point WKT representations """
+
+        # MGRA csv files containing series 13 MGRAs in EPSG 2230
+        # broken up due to GitHub upload file size limit
+        mgra = pd.concat(
+            [
+                pd.read_csv(
+                    "C:/Users/gsc/OneDrive - San Diego Association of Governments/gsc/git/hhts/data/mgra_13_1.csv",
+                    usecols=["mgra_13", "wkt"],
+                    dtype={"mgra_13": "Int16"}
+                ),
+                pd.read_csv(
+                    "C:/Users/gsc/OneDrive - San Diego Association of Governments/gsc/git/hhts/data/mgra_13_2.csv",
+                    usecols=["mgra_13", "wkt"],
+                    dtype={"mgra_13": "Int16"}
+                )
+            ],
+            ignore_index=True
+        )
+
+        # create GeoPandas DataFrame from MGRA file
+        mgra_gdf = gpd.GeoDataFrame(
+            mgra,
+            geometry=mgra["wkt"].apply(wkt.loads),
+            crs="EPSG:2230"
+        )
+
+        # create GeoPandas DataFrame from input list of points in EPSG:2230
+        # map missing WKT values to "POINT EMPTY" to allow for missing values
+        points = points.fillna("POINT EMPTY")
+        point_gdf = gpd.GeoDataFrame(
+            geometry=points.apply(wkt.loads),
+            crs="EPSG:2230"
+        )
+
+        # left spatial join points to polygons using the intersection
+        inters = gpd.sjoin(point_gdf, mgra_gdf, how="left", op="intersects")
+
+        # if a point has multiple MGRA intersections use the first MGRA
+        xref = inters["mgra_13"].min(level=0).astype("Int16")
+
+        return xref
 
     @staticmethod
     def point_wkt(coordinates: Iterable, crs: str) -> list:
@@ -834,6 +888,7 @@ class SurveyData(object):
                 latitude - home location latitude
                 longitude - home location longitude
                 shape - home location shape attribute (EPSG: 2230)
+                mgra_13 - home location Series 13 MGRA
                 residence_duration - duration at current residence
                 residence_type - type of residence
                 income_category_detailed - previous year household income detailed categories
@@ -1361,6 +1416,7 @@ class SurveyData(object):
 
         # WKT household location point geometry from lat/long in EPSG:2230
         df["shape"] = self.point_wkt(zip(df["home_lng"], df["home_lat"]), "EPSG:2230")
+        df["mgra_13"] = self.mgra_xref(df["shape"])
 
         # rename columns
         df.rename(columns={
@@ -1459,6 +1515,7 @@ class SurveyData(object):
                    "latitude",
                    "longitude",
                    "shape",
+                   "mgra_13",
                    "residence_duration",
                    "residence_tenure_status",
                    "residence_type",
@@ -1517,10 +1574,14 @@ class SurveyData(object):
                 origin_address - trip origin address
                 origin_latitude - trip origin latitude
                 origin_longitude - trip origin longitude
+                origin_shape - trip origin shape attribute (EPSG: 2230)
+                origin_mgra_13 - trip origin Series 13 MGRA
                 destination_purpose - primary purpose at trip destination
                 destination_address - trip destination address
                 destination_latitude - trip destination latitude
                 destination_longitude - trip destination longitude
+                destination_shape - trip destination shape attribute (EPSG: 2230)
+                destination_mgra_13 - trip destination Series 13 MGRA
                 distance_beeline - o-d beeline distance (miles)
                 distance_beeline_bin - o-d beeline distance category
                 visit_work - employed or volunteer/intern; if trip o/d is not work,
@@ -1848,6 +1909,20 @@ class SurveyData(object):
             df.school_int_1_1
         )
 
+        # WKT origin point geometry from lat/long in EPSG:2230
+        df["origin_shape"] = self.point_wkt(
+            zip(df["origin_loc_lng_1"], df["origin_loc_lat_1"]),
+            "EPSG:2230"
+        )
+        df["origin_mgra_13"] = self.mgra_xref(df["origin_shape"])
+
+        # WKT origin point geometry from lat/long in EPSG:2230
+        df["destination_shape"] = self.point_wkt(
+            zip(df["dest_loc_lng_1"], df["dest_loc_lat_1"]),
+            "EPSG:2230"
+        )
+        df["destination_mgra_13"] = self.mgra_xref(df["destination_shape"])
+
         # rename columns
         df.rename(columns={
             "hhid": "household_id",
@@ -1903,10 +1978,14 @@ class SurveyData(object):
                    "origin_address",
                    "origin_latitude",
                    "origin_longitude",
+                   "origin_shape",
+                   "origin_mgra_13",
                    "destination_purpose",
                    "destination_address",
                    "destination_latitude",
                    "destination_longitude",
+                   "destination_shape",
+                   "destination_mgra_13",
                    "distance_beeline",
                    "distance_beeline_bin",
                    "visit_work",
@@ -2081,22 +2160,27 @@ class SurveyData(object):
                 second_home_latitude - secondary home latitude
                 second_home_longitude - secondary home longitude
                 second_home_shape - secondary home WKT geometry (EPSG:2230)
+                second_home_mgra_13 - secondary home Series 13 MGRA
                 school_address - primary school address
                 school_latitude - primary school latitude
                 school_longitude - primary school longitude
                 school_shape - primary school WKT geometry (EPSG: 2230)
+                school_mgra_13 - primary school Series 13 MGRA
                 second_school_address - secondary school address
                 second_school_latitude - secondary school latitude
                 second_school_longitude - secondary school longitude
                 second_school_shape - secondary school WKT geometry (EPSG: 2230)
+                second_school_mgra_13 - secondary school Series 13 MGRA
                 work_address - primary work address
                 work_latitude - primary work latitude
                 work_longitude - primary work longitude
                 work_shape - primary work WKT geometry (EPSG:2230)
+                work_mgra_13 - primary work Series 13 MGRA
                 second_work_address - secondary work address
                 second_work_latitude - secondary work latitude
                 second_work_longitude - secondary work longitude
                 second_work_shape - secondary work WKT geometry (EPSG:2230)
+                second_work_mgra_13 - secondary work Series 13 MGRA
                 smartphone_type - age 16+ smartphone type owned
                 smartphone_age - qualified smartphone obtained in past four years
                 smartphone_child - age 16-17 with qualified smartphone, allowed to use rMove
@@ -3018,30 +3102,36 @@ class SurveyData(object):
         df["work_address"] = df["work_address"].fillna("Missing")
 
         # create WKT point geometries from lat/long in EPSG:2230
+        # then use geometries to get Series 13 MGRAs of lat/long location
         df["second_home_shape"] = self.point_wkt(
             coordinates=zip(df["secondhome_lng"], df["secondhome_lat"]),
             crs="EPSG:2230"
         )
+        df["second_home_mgra_13"] = self.mgra_xref(df["second_home_shape"])
 
         df["school_shape"] = self.point_wkt(
             coordinates=zip(df["mainschool_lng"], df["mainschool_lat"]),
             crs="EPSG:2230"
         )
+        df["school_mgra_13"] = self.mgra_xref(df["school_shape"])
 
         df["second_school_shape"] = self.point_wkt(
             coordinates=zip(df["secondschool_lng"], df["secondschool_lat"]),
             crs="EPSG:2230"
         )
+        df["second_school_mgra_13"] = self.mgra_xref(df["second_school_shape"])
 
         df["work_shape"] = self.point_wkt(
             coordinates=zip(df["work_lng"], df["work_lat"]),
             crs="EPSG:2230"
         )
+        df["work_mgra_13"] = self.mgra_xref(df["work_shape"])
 
         df["second_work_shape"] = self.point_wkt(
             coordinates=zip(df["secondwork_lng"], df["secondwork_lat"]),
             crs="EPSG:2230"
         )
+        df["second_work_mgra_13"] = self.mgra_xref(df["second_work_shape"])
 
         # rename columns
         df.rename(columns={
@@ -3160,22 +3250,27 @@ class SurveyData(object):
                    "second_home_latitude",
                    "second_home_longitude",
                    "second_home_shape",
+                   "second_home_mgra_13",
                    "school_address",
                    "school_latitude",
                    "school_longitude",
                    "school_shape",
+                   "school_mgra_13",
                    "second_school_address",
                    "second_school_latitude",
                    "second_school_longitude",
                    "second_school_shape",
+                   "second_school_mgra_13",
                    "work_address",
                    "work_latitude",
                    "work_longitude",
                    "work_shape",
+                   "work_mgra_13",
                    "second_work_address",
                    "second_work_latitude",
                    "second_work_longitude",
                    "second_work_shape",
+                   "second_work_mgra_13",
                    "smartphone_type",
                    "smartphone_age",
                    "smartphone_child",
@@ -3227,11 +3322,13 @@ class SurveyData(object):
                 origin_latitude - origin latitude
                 origin_longitude - origin longitude
                 origin_shape - origin point geometry (EPSG: 2230)
+                origin_mgra_13 - origin Series 13 MGRA
                 destination_name - online trip; destination name
                 destination_address - online trip; destination address
                 destination_latitude - destination latitude
                 destination_longitude - destination longitude
                 destination_shape - destination point geometry (EPSG:2230)
+                destination_mgra_13 - origin Series 13 MGRA
                 origin_purpose - derived origin purpose
                 origin_purpose_other_specify - derived other origin purpose
                 origin_purpose_inferred - inferred origin purpose based on home, work, and school locations
@@ -4437,9 +4534,11 @@ class SurveyData(object):
 
         # WKT origin point geometry from lat/long in EPSG:2230
         df["origin_shape"] = self.point_wkt(zip(df["origin_lng"], df["origin_lat"]), "EPSG:2230")
+        df["origin_mgra_13"] = self.mgra_xref(df["origin_shape"])
 
         # WKT destination point geometry from lat/long in EPSG:2230
         df["destination_shape"] = self.point_wkt(zip(df["destination_lng"], df["destination_lat"]), "EPSG:2230")
+        df["destination_mgra_13"] = self.mgra_xref(df["destination_shape"])
 
         # rename columns
         df.rename(columns={
@@ -4538,11 +4637,13 @@ class SurveyData(object):
                    "origin_latitude",
                    "origin_longitude",
                    "origin_shape",
+                   "origin_mgra_13",
                    "destination_name",
                    "destination_address",
                    "destination_latitude",
                    "destination_longitude",
                    "destination_shape",
+                   "destination_mgra_13",
                    "origin_purpose",
                    "origin_purpose_other_specify",
                    "origin_purpose_inferred",

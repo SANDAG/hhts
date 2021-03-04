@@ -83,6 +83,7 @@ CREATE TABLE [hhtbs2016].[households] (
     [latitude] float NOT NULL,
     [longitude] float NOT NULL,
     [shape] geometry NOT NULL,
+    [mgra_13] integer NOT NULL,
     [residence_duration] nvarchar(50) NOT NULL,
     [residence_tenure_status] nvarchar(50) NOT NULL,
     [residence_type] nvarchar(50) NOT NULL,
@@ -160,10 +161,14 @@ CREATE TABLE [hhtbs2016].[intercept] (
 	[origin_address] nvarchar(125) NOT NULL,
 	[origin_latitude] float NOT NULL,
 	[origin_longitude] float NOT NULL,
+	[origin_shape] geometry NOT NULL,
+    [origin_mgra_13] integer NULL,  -- allow NULLs
 	[destination_purpose] nvarchar(65) NOT NULL,
 	[destination_address] nvarchar(125) NOT NULL,
 	[destination_latitude] float NOT NULL,
 	[destination_longitude] float NOT NULL,
+	[destination_shape] geometry NOT NULL,
+    [destination_mgra_13] integer NULL,  -- allow NULLs
 	[distance_beeline] float NOT NULL,
 	[distance_beeline_bin] nvarchar(20) NOT NULL,
 	[visit_work] nvarchar(20) NOT NULL,
@@ -279,22 +284,27 @@ CREATE TABLE [hhtbs2016].[persons] (
     [second_home_latitude] float NULL,  -- allow NULLS
     [second_home_longitude] float NULL,  -- allow NULLS
     [second_home_shape] geometry NULL,  -- allow NULLS
+    [second_home_mgra_13] integer NULL,  -- allow NULLS
     [school_address] nvarchar(110) NOT NULL,
     [school_latitude] float NULL,  -- allow NULLS
     [school_longitude] float NULL,  -- allow NULLS
     [school_shape] geometry NULL,  -- allow NULLS
+    [school_mgra_13] integer NULL,  -- allow NULLS
     [second_school_address] nvarchar(110) NOT NULL,
     [second_school_latitude] float NULL,  -- allow NULLS
     [second_school_longitude] float NULL,  -- allow NULLS
     [second_school_shape] geometry NULL,  -- allow NULLS
+    [second_school_mgra_13] integer NULL,  -- allow NULLS
     [work_address] nvarchar(110) NOT NULL,
     [work_latitude] float NULL,  -- allow NULLS
     [work_longitude] float NULL,  -- allow NULLS
     [work_shape] geometry NULL,  -- allow NULLS
+    [work_mgra_13] integer NULL,  -- allow NULLS
     [second_work_address] nvarchar(110) NOT NULL,
     [second_work_latitude] float NULL,  -- allow NULLS
     [second_work_longitude] float NULL,  -- allow NULLS
     [second_work_shape] geometry NULL,  -- allow NULLS
+    [second_work_mgra_13] integer NULL,  -- allow NULLS
     [smartphone_type] nvarchar(35) NOT NULL,
     [smartphone_age] nvarchar(15) NOT NULL,
     [smartphone_child] nvarchar(15) NOT NULL,
@@ -347,11 +357,13 @@ CREATE TABLE [hhtbs2016].[trips](
 	[origin_latitude] float NULL,
 	[origin_longitude] float NULL,
 	[origin_shape] geometry NULL,
+	[origin_mgra_13] integer NULL,
 	[destination_name] nvarchar(150) NOT NULL,
 	[destination_address] nvarchar(150) NOT NULL,
 	[destination_latitude] float NULL,
 	[destination_longitude] float NULL,
 	[destination_shape] geometry NULL,
+	[destination_mgra_13] integer NULL,
 	[origin_purpose] nvarchar(60) NOT NULL,
 	[origin_purpose_other_specify] nvarchar(150) NOT NULL,
 	[origin_purpose_inferred] nvarchar(50) NOT NULL,

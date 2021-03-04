@@ -83,6 +83,7 @@ with conn.cursor() as cursor:
             "[latitude] float NOT NULL," \
             "[longitude] float NOT NULL," \
             "[shape] nvarchar(max) NOT NULL," \
+            "[mgra_13] integer NOT NULL," \
             "[residence_duration] nvarchar(50) NOT NULL," \
             "[residence_tenure_status] nvarchar(50) NOT NULL," \
             "[residence_type] nvarchar(50) NOT NULL," \
@@ -147,7 +148,7 @@ with conn.cursor() as cursor:
                 "[has_share_car], [has_share_bicycle], [has_share_vanpool]," \
                 "[address], [latitude], [longitude]," \
                 "geometry::STGeomFromText([shape], 2230).MakeValid()," \
-                "[residence_duration], [residence_tenure_status]," \
+                "[mgra_13], [residence_duration], [residence_tenure_status]," \
                 "[residence_type], [income_category_detailed]," \
                 "[income_category_broad], [use_paper_maps]," \
                 "[freq_paper_maps], [use_car_navigation]," \
@@ -256,13 +257,95 @@ borderTrips.to_sql(name="border_trips",
 print("Loading: AT-Intercept data")
 atInt = hhtbs2016Data.SurveyData().intercept
 
-# load AT-intercept pandas DataFrame to SQL
-atInt.to_sql(name="intercept",
-             schema="hhtbs2016",
-             con=engine,
-             if_exists="append",
-             index=False)
+# write AT-intercept data to csv file
+interceptPath = "../data/sdrts/intercept.csv"
+atInt.to_csv(interceptPath, index=False, sep="|")
 
+# bulk insert AT-intercept data to SQL Server temporary table
+# then insert to SQL household table transforming WKT to geometry
+with conn.cursor() as cursor:
+    sqlTT = "DROP TABLE IF EXISTS [hhtbs2016].[tempIntercept];" \
+            "CREATE TABLE [hhtbs2016].[tempIntercept] (" \
+            "[household_id] integer NOT NULL," \
+            "[survey_status] nvarchar(10) NOT NULL," \
+            "[survey_start] smalldatetime NOT NULL," \
+            "[survey_end] smalldatetime NOT NULL," \
+            "[survey_date] date NOT NULL," \
+            "[pilot_study] nvarchar(10) NOT NULL," \
+            "[origin_purpose] nvarchar(65) NOT NULL," \
+            "[employment_status] nvarchar(50) NOT NULL," \
+            "[student_status] nvarchar(60) NOT NULL," \
+            "[origin_address] nvarchar(125) NOT NULL," \
+            "[origin_latitude] float NOT NULL," \
+            "[origin_longitude] float NOT NULL," \
+            "[origin_shape] nvarchar(max) NOT NULL," \
+            "[origin_mgra_13] integer NULL," \
+            "[destination_purpose] nvarchar(65) NOT NULL," \
+            "[destination_address] nvarchar(125) NOT NULL," \
+            "[destination_latitude] float NOT NULL," \
+            "[destination_longitude] float NOT NULL," \
+            "[destination_shape] nvarchar(max) NOT NULL," \
+            "[destination_mgra_13] integer NULL," \
+            "[distance_beeline] float NOT NULL," \
+            "[distance_beeline_bin] nvarchar(20) NOT NULL," \
+            "[visit_work] nvarchar(20) NOT NULL," \
+            "[visit_school] nvarchar(20) NOT NULL," \
+            "[number_household_vehicles] nvarchar(10) NOT NULL," \
+            "[number_children_0_15] tinyint NOT NULL," \
+            "[number_children_16_17] tinyint NOT NULL," \
+            "[number_adults] tinyint NOT NULL," \
+            "[age] nvarchar(20) NOT NULL," \
+            "[smartphone] nvarchar(35) NOT NULL," \
+            "[resident] nvarchar(10) NOT NULL," \
+            "[bike_party] nvarchar(10) NOT NULL," \
+            "[bike_share] nvarchar(10) NOT NULL," \
+            "[gender] nvarchar(10) NOT NULL," \
+            "[intercept_site] nvarchar(85) NOT NULL," \
+            "[intercept_direction] nvarchar(10) NOT NULL," \
+            "[language] nvarchar(10) NOT NULL," \
+            "[rmove_qualify] nvarchar(10) NOT NULL," \
+            "[opt_out] nvarchar(15) NOT NULL," \
+            "[rmove_participate] nvarchar(10) NOT NULL," \
+            "[rmove_complete] nvarchar(15) NOT NULL," \
+            "[recruit_complete] nvarchar(20) NOT NULL," \
+            "[survey_time_peak] nvarchar(10) NOT NULL," \
+            "[expansion_site] nvarchar(85) NOT NULL," \
+            "[expansion_factor] float NULL," \
+            "CONSTRAINT [pk_hhtbs2016_tempIntercept] PRIMARY KEY CLUSTERED ([household_id]))"
+    cursor.execute(sqlTT)
+    cursor.commit()
+
+    sqlBI = "BULK INSERT [hhtbs2016].[tempIntercept] FROM '" + \
+            os.path.realpath(interceptPath) + "' " + \
+            "WITH (FIRSTROW = 2, TABLOCK, CODEPAGE = 'ACP', " + \
+            "FIELDTERMINATOR='|', ROWTERMINATOR='0x0a', MAXERRORS=1);"
+
+    cursor.execute(sqlBI)
+    cursor.commit()
+
+    sqlInsert = "INSERT INTO [hhtbs2016].[intercept] " \
+                "SELECT [household_id], [survey_status], [survey_start]," \
+                "[survey_end], [survey_date], [pilot_study]," \
+                "[origin_purpose], [employment_status], [student_status]," \
+                "[origin_address], [origin_latitude], [origin_longitude]," \
+                "geometry::STGeomFromText([origin_shape], 2230).MakeValid()," \
+                "[origin_mgra_13], [destination_purpose], [destination_address]," \
+                "[destination_latitude], [destination_longitude]," \
+                "geometry::STGeomFromText([destination_shape], 2230).MakeValid()," \
+                "[destination_mgra_13], [distance_beeline], [distance_beeline_bin]," \
+                "[visit_work], [visit_school], [number_household_vehicles]," \
+                "[number_children_0_15], [number_children_16_17], [number_adults]," \
+                "[age], [smartphone], [resident], [bike_party], [bike_share]," \
+                "[gender], [intercept_site], [intercept_direction]," \
+                "[language], [rmove_qualify], [opt_out], [rmove_participate]," \
+                "[rmove_complete], [recruit_complete], [survey_time_peak]," \
+                "[expansion_site], [expansion_factor] " \
+                "FROM [hhtbs2016].[tempIntercept]; " \
+                "DROP TABLE [hhtbs2016].[tempIntercept]"
+    cursor.execute(sqlInsert)
+    cursor.commit()
+
+os.remove(interceptPath)
 
 # persons ----
 print("Loading: Persons data")
@@ -334,22 +417,27 @@ with conn.cursor() as cursor:
             "[second_home_latitude] float NULL," \
             "[second_home_longitude] float NULL," \
             "[second_home_shape] nvarchar(max) NULL," \
+            "[second_home_mgra_13] integer NULL," \
             "[school_address] nvarchar(110) NOT NULL," \
             "[school_latitude] float NULL," \
             "[school_longitude] float NULL," \
             "[school_shape] nvarchar(max) NULL," \
+            "[school_mgra_13] integer NULL," \
             "[second_school_address] nvarchar(110) NOT NULL," \
             "[second_school_latitude] float NULL," \
             "[second_school_longitude] float NULL," \
             "[second_school_shape] nvarchar(max) NULL," \
+            "[second_school_mgra_13] integer NULL," \
             "[work_address] nvarchar(110) NOT NULL," \
             "[work_latitude] float NULL," \
             "[work_longitude] float NULL," \
             "[work_shape] nvarchar(max) NULL," \
+            "[work_mgra_13] integer NULL," \
             "[second_work_address] nvarchar(110) NOT NULL," \
             "[second_work_latitude] float NULL," \
             "[second_work_longitude] float NULL," \
             "[second_work_shape] nvarchar(max) NULL," \
+            "[second_work_mgra_13] integer NULL," \
             "[smartphone_type] nvarchar(35) NOT NULL," \
             "[smartphone_age] nvarchar(15) NOT NULL," \
             "[smartphone_child] nvarchar(15) NOT NULL," \
@@ -399,16 +487,16 @@ with conn.cursor() as cursor:
                 "[has_second_home], [second_home_address]," \
                 "[second_home_latitude], [second_home_longitude]," \
                 "geometry::STGeomFromText([second_home_shape], 2230).MakeValid()," \
-                "[school_address], [school_latitude], [school_longitude]," \
+                "[second_home_mgra_13], [school_address], [school_latitude], [school_longitude]," \
                 "geometry::STGeomFromText([school_shape], 2230).MakeValid()," \
-                "[second_school_address], [second_school_latitude]," \
+                "[school_mgra_13], [second_school_address], [second_school_latitude]," \
                 "[second_school_longitude]," \
                 "geometry::STGeomFromText([second_school_shape], 2230).MakeValid()," \
-                "[work_address], [work_latitude], [work_longitude]," \
+                "[second_school_mgra_13], [work_address], [work_latitude], [work_longitude]," \
                 "geometry::STGeomFromText([work_shape], 2230).MakeValid()," \
-                "[second_work_address], [second_work_latitude], [second_work_longitude]," \
+                "[work_mgra_13], [second_work_address], [second_work_latitude], [second_work_longitude]," \
                 "geometry::STGeomFromText([second_work_shape], 2230).MakeValid()," \
-                "[smartphone_type], [smartphone_age], [smartphone_child]," \
+                "[second_work_mgra_13], [smartphone_type], [smartphone_age], [smartphone_child]," \
                 "[diary_callcenter], [diary_mobile], [rmove_activated]," \
                 "[completed_days], [completed_day1], [completed_day2]," \
                 "[completed_day3], [completed_day4], [completed_day5]," \
@@ -466,11 +554,13 @@ with conn.cursor() as cursor:
             "[origin_latitude] float NULL," \
             "[origin_longitude] float NULL," \
             "[origin_shape] nvarchar(MAX) NULL," \
+            "[origin_mgra_13] integer NULL," \
             "[destination_name] nvarchar(150) NOT NULL," \
             "[destination_address] nvarchar(150) NOT NULL," \
             "[destination_latitude] float NULL," \
             "[destination_longitude] float NULL," \
             "[destination_shape] nvarchar(MAX) NULL," \
+            "[destination_mgra_13] integer NULL," \
             "[origin_purpose] nvarchar(60) NOT NULL," \
             "[origin_purpose_other_specify] nvarchar(150) NOT NULL," \
             "[origin_purpose_inferred] nvarchar(50) NOT NULL," \
@@ -547,10 +637,10 @@ with conn.cursor() as cursor:
                 "[unlinked_transit_trip], [origin_name], [origin_address]," \
                 "[origin_latitude], [origin_longitude]," \
                 "geometry::STGeomFromText([origin_shape], 2230).MakeValid()," \
-                "[destination_name], [destination_address]," \
+                "[origin_mgra_13], [destination_name], [destination_address]," \
                 "[destination_latitude], [destination_longitude]," \
                 "geometry::STGeomFromText([destination_shape], 2230).MakeValid()," \
-                "[origin_purpose], [origin_purpose_other_specify]," \
+                "[destination_mgra_13], [origin_purpose], [origin_purpose_other_specify]," \
                 "[origin_purpose_inferred], [destination_purpose]," \
                 "[destination_purpose_other_specify], [destination_purpose_inferred]," \
                 "[departure_time], [arrival_time], [travelers]," \

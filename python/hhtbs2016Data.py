@@ -1897,14 +1897,16 @@ class SurveyData(object):
 
         # combine work visit variables
         df["visit_work"] = np.where(
-            df.work_int_1_1.isin(["Missing", "Not Applicable"]),
+            (df.work_int_1_1.isin(["Missing", "Not Applicable"])) &
+            (df.work_int_1_2 != "Missing"),
             df.work_int_1_2,
             df.work_int_1_1
         )
 
         # combine school visit variables
         df["visit_school"] = np.where(
-            df.school_int_1_1.isin(["Missing", "Not Applicable"]),
+            (df.school_int_1_1.isin(["Missing", "Not Applicable"])) &
+            (df.school_int_1_2 != "Missing"),
             df.school_int_1_2,
             df.school_int_1_1
         )

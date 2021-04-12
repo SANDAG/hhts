@@ -489,6 +489,7 @@ class SurveyData(object):
                     delivered on travel date
                 deliver_work - all rMoves, first adult answer online diary; someone came
                     to house to do service/work on travel date
+                weight_household_456x - household weight recommended for use
                 weight_household_multiday_factor - household multi-day weight factor
                 weight_person_multiday_456x - factored person-day weight """
 
@@ -598,6 +599,7 @@ class SurveyData(object):
                              "deliver_package",
                              "deliver_food",
                              "deliver_work",
+                             "hhnewwt_456x",
                              "multiday_factor",
                              "multiday_weight_456x"],
                     dtype={"travel_dow": "Int8",
@@ -679,8 +681,6 @@ class SurveyData(object):
                                    9: "Other reason (no reason given)",
                                    10: "Stayed on base all day",
                                    97: "Other reason",
-                                   -9998: "Participant non-response",
-                                   -9999: "Technical error",
                                    pd.NA: "Not Applicable"},
             "loc_start": {1: "Home",
                           2: "Work (Primary)",
@@ -815,6 +815,7 @@ class SurveyData(object):
             "shop_time": "time_shop",
             "toll_no": "toll_road",
             "toll_express": "toll_road_express",
+            "hhnewwt_456x": "weight_household_456x",
             "multiday_factor": "weight_household_multiday_factor",
             "multiday_weight_456x": "weight_person_multiday_456x"
         },
@@ -854,6 +855,7 @@ class SurveyData(object):
                    "deliver_package",
                    "deliver_food",
                    "deliver_work",
+                   "weight_household_456x",
                    "weight_household_multiday_factor",
                    "weight_person_multiday_456x"]]
 
@@ -4015,8 +4017,6 @@ class SurveyData(object):
                       55: "Express bus/Rapid",
                       97: "Other mode",
                       150: "San Diego Coaster Line",
-                      -9999: "Technical error",
-                      -9998: "Participant non-response",
                       pd.NA: "Not Applicable"},
             "mode3": {1: "Walk/jog/wheelchair",
                       2: "Personal bicycle",
@@ -4058,8 +4058,6 @@ class SurveyData(object):
                       55: "Express bus/Rapid",
                       97: "Other mode",
                       150: "San Diego Coaster Line",
-                      -9999: "Technical error",
-                      -9998: "Participant non-response",
                       pd.NA: "Not Applicable"},
             "mode4": {1: "Walk/jog/wheelchair",
                       2: "Personal bicycle",
@@ -4101,8 +4099,6 @@ class SurveyData(object):
                       55: "Express bus/Rapid",
                       97: "Other mode",
                       150: "San Diego Coaster Line",
-                      -9999: "Technical error",
-                      -9998: "Participant non-response",
                       pd.NA: "Not Applicable"},
             "transit_access": {1: "Walked or jogged",
                                2: "Rode a bike",
@@ -4135,10 +4131,14 @@ class SurveyData(object):
             "toll_no": {1: "No",  # flip mapping
                         0: "Yes",  # flip mapping
                         99: "Not Applicable",
+                        -9998: "Participant non-response",
+                        -9999: "Technical error",
                         pd.NA: "Missing"},
             "toll_express": {0: "No",
                              1: "Yes",
                              99: "Not Applicable",
+                             -9998: "Participant non-response",
+                             -9999: "Technical error",
                              pd.NA: "Missing"},
             "parklocation": {1: "My own driveway/garage",
                              2: "Someone elses driveway",
@@ -4161,6 +4161,8 @@ class SurveyData(object):
                          pd.NA: "Missing"},
             "park_cost_dk": {0: "No",
                              1: "Yes",
+                             -9999: "Technical error",
+                             -9998: "Participant non-response",
                              pd.NA: "Missing"},
             "taxitype": {1: "I paid the fare myself (no reimbursement)",
                          2: "Employer paid (I am reimbursed)",
@@ -4172,6 +4174,8 @@ class SurveyData(object):
                          pd.NA: "Missing"},
             "taxi_cost_dk": {0: "No",
                              1: "Yes",
+                             -9999: "Technical error",
+                             -9998: "Participant non-response",
                              pd.NA: "Missing"},
             "airtype": {1: "Personally paid the airfare cost",
                         2: "Employer paid 100%",
@@ -4183,6 +4187,8 @@ class SurveyData(object):
                         pd.NA: "Missing"},
             "airfare_cost_dk": {0: "No",
                                 1: "Yes",
+                                -9999: "Technical error",
+                                -9998: "Participant non-response",
                                 pd.NA: "Missing"},
             "bustype": {-9999: "Technical error",
                         -9998: "Participant non-response",
@@ -4194,6 +4200,8 @@ class SurveyData(object):
                         pd.NA: "Missing"},
             "bus_cost_dk": {0: "No",
                             1: "Yes",
+                            -9999: "Technical error",
+                            -9998: "Participant non-response",
                             pd.NA: "Missing"},
             "railtype": {1: "Free (no cost)",
                          2: "Used pass (any type)",
@@ -4205,6 +4213,8 @@ class SurveyData(object):
                          pd.NA: "Missing"},
             "rail_cost_dk": {0: "No",
                              1: "Yes",
+                             -9999: "Technical error",
+                             -9998: "Participant non-response",
                              pd.NA: "Missing"},
             "ferrytype": {1: "Free (no cost)",
                           2: "Used pass (any type)",
@@ -4214,6 +4224,8 @@ class SurveyData(object):
                           pd.NA: "Missing"},
             "ferry_cost_dk": {0: "No",
                               1: "Yes",
+                              -9999: "Technical error",
+                              -9998: "Participant non-response",
                               pd.NA: "Missing"},
             "parkride_lot": {1: "Lot #16 Poway Rd at Sabre Springs Pkwy",
                              2: "Lot #17 I-8 at Taylor St",

@@ -27,7 +27,7 @@ print("Loading: Person Trip Day-Level data")
 day = hhtbs2016Data.SurveyData().day
 
 # write person trip day-level data to csv file
-dayPath = "../data/sdrts/day.csv"
+dayPath = "../data/day.csv"
 day.to_csv(dayPath, index=False, sep="|")
 
 # bulk insert person trip day-level data to SQL Server table
@@ -48,7 +48,7 @@ print("Loading: Households data")
 hh = hhtbs2016Data.SurveyData().households
 
 # write households data to csv file
-hhPath = "../data/sdrts/households.csv"
+hhPath = "../data/households.csv"
 hh.to_csv(hhPath, index=False, sep="|")
 
 # bulk insert household data to SQL Server temporary table
@@ -177,8 +177,8 @@ print("Loading: Location data")
 locations = hhtbs2016Data.SurveyData().location
 
 # write location data to csv files
-linesPath = "../data/sdrts/lines.csv"
-pointsPath = "../data/sdrts/points.csv"
+linesPath = "../data/lines.csv"
+pointsPath = "../data/points.csv"
 locations["lines"].to_csv(linesPath, index=False, sep="|", na_rep="")
 locations["points"].to_csv(pointsPath, index=False, sep="|")
 
@@ -258,7 +258,7 @@ print("Loading: AT-Intercept data")
 atInt = hhtbs2016Data.SurveyData().intercept
 
 # write AT-intercept data to csv file
-interceptPath = "../data/sdrts/intercept.csv"
+interceptPath = "../data/intercept.csv"
 atInt.to_csv(interceptPath, index=False, sep="|")
 
 # bulk insert AT-intercept data to SQL Server temporary table
@@ -352,7 +352,7 @@ print("Loading: Persons data")
 p = hhtbs2016Data.SurveyData().persons
 
 # write persons data to csv file
-pPath = "../data/sdrts/persons.csv"
+pPath = "../data/persons.csv"
 p.to_csv(pPath, index=False, sep="|")
 
 # bulk insert persons data to SQL Server temporary table
@@ -514,7 +514,7 @@ print("Loading: Trip List data")
 trips = hhtbs2016Data.SurveyData().trips
 
 # write trip data to csv file
-tripsPath = "../data/sdrts/trips.csv"
+tripsPath = "../data/trips.csv"
 trips.to_csv(tripsPath, index=False, sep="|")
 
 # bulk insert trip data to SQL Server temporary table

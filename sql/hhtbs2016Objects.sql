@@ -46,6 +46,7 @@ CREATE TABLE [hhtbs2016].[day] (
 	[deliver_package] nvarchar(25) NOT NULL,
 	[deliver_food] nvarchar(25) NOT NULL,
 	[deliver_work] nvarchar(25) NOT NULL,
+	[weight_household_456x] float NULL,
 	[weight_household_multiday_factor] float NULL,
 	[weight_person_multiday_456x] float NULL,
     CONSTRAINT pk_day PRIMARY KEY CLUSTERED ([day_id]),
